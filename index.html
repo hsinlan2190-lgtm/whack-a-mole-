@@ -1,0 +1,64 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#a7df85">
+  <title>花園打地鼠</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game">
+    <header class="game-header">
+      <p class="eyebrow">GARDEN GAME</p>
+      <h1>🌼 花園打地鼠</h1>
+      <p class="subtitle">快來抓住調皮的小地鼠！</p>
+    </header>
+
+    <section class="scoreboard" aria-label="遊戲資訊">
+      <div class="stat">
+        <span>分數</span>
+        <strong id="score">0</strong>
+      </div>
+      <div class="stat">
+        <span>剩餘時間</span>
+        <strong><span id="time">60</span> 秒</strong>
+      </div>
+      <div class="stat">
+        <span>連擊</span>
+        <strong id="combo">0</strong>
+      </div>
+      <div class="stat">
+        <span>最高分</span>
+        <strong id="best">0</strong>
+      </div>
+    </section>
+
+    <section class="garden" aria-label="打地鼠遊戲區">
+      <div class="garden-decoration flower flower-one">🌼</div>
+      <div class="garden-decoration flower flower-two">🌸</div>
+      <div class="garden-decoration butterfly">🦋</div>
+
+      <div class="holes" id="holes">
+        <!-- 由 script.js 建立九個洞口 -->
+      </div>
+
+      <div id="message" class="message" role="status" aria-live="polite">
+        準備好挑戰了嗎？
+      </div>
+    </section>
+
+    <section class="controls">
+      <button id="startBtn" class="start-button" type="button">
+        開始遊戲
+      </button>
+      <p class="instructions">點擊地鼠得分！每局 60 秒。</p>
+    </section>
+
+    <div id="hammer" class="hammer" aria-hidden="true"></div>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
