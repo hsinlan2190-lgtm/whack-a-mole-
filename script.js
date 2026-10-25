@@ -1,334 +1,333 @@
 
-* {
-  box-sizing: border-box;
-}
+const TOTAL_TIME = 60;
+const HOLE_COUNT = 9;
 
-:root {
-  --grass: #b9e99a;
-  --grass-dark: #79bf59;
-  --brown: #8c5939;
-  --cream: #fff8df;
-  --green: #397e43;
-}
+const MOLE_FRAMES = [
+  "mole_01_emerge_start.png",
+  "mole_02_head_rising.png",
+  "mole_03_eyes_visible.png",
+  "mole_04_nose_visible.png",
+  "mole_05_fully_emerged.png",
+  "mole_06_surprised.png",
+  "mole_07_hit_reaction.png",
+  "mole_08_stars.png",
+  "mole_09_dizzy.png",
+  "mole_10_retreat_start.png",
+  "mole_11_head_sinking.png",
+  "mole_12_retracted.png"
+];
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  padding: 20px 12px 40px;
-  font-family: "Trebuchet MS", "Noto Sans TC", sans-serif;
-  color: #3f5734;
-  background:
-    radial-gradient(ellipse at 15% 10%, #f5ffcf 0, transparent 30%),
-    linear-gradient(180deg, #d9f6bb, #8fd27d);
-}
+const MOLE_PATH = "assets/sprites/moles/";
 
-button {
-  font: inherit;
-}
+const scoreElement = document.getElementById("score");
+const timeElement = document.getElementById("time");
+const comboElement = document.getElementById("combo");
+const bestElement = document.getElementById("best");
+const holesElement = document.getElementById("holes");
+const messageElement = document.getElementById("message");
+const startButton = document.getElementById("startBtn");
+const hammerElement = document.getElementById("hammer");
 
-.game {
-  width: min(100%, 760px);
-  margin: 0 auto;
-}
+let score = 0;
+let combo = 0;
+let timeLeft = TOTAL_TIME;
+let bestScore = loadBestScore();
+let playing = false;
+let timerId = null;
+let spawnId = null;
+let activeMoles = new Map();
+let lastHoleIndex = -1;
 
-.game-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
+bestElement.textContent = bestScore;
 
-.eyebrow {
-  margin: 0;
-  color: #4e9149;
-  font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 4px;
-}
-
-h1 {
-  margin: 7px 0;
-  font-size: clamp(28px, 6vw, 42px);
-  color: #356f3b;
-  text-shadow: 0 3px 0 #ffffffb0;
-}
-
-.subtitle {
-  margin: 0;
-  color: #567b47;
-}
-
-.scoreboard {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.stat {
-  padding: 12px 4px;
-  text-align: center;
-  border: 2px solid #ffffffb8;
-  border-radius: 17px;
-  background: #fffbe8e8;
-  box-shadow: 0 4px 0 #75b86d;
-}
-
-.stat span {
-  display: block;
-  font-size: 12px;
-  color: #67845b;
-}
-
-.stat strong {
-  display: block;
-  margin-top: 4px;
-  font-size: clamp(18px, 4vw, 25px);
-  color: #397d43;
-  font-variant-numeric: tabular-nums;
-}
-
-.garden {
-  position: relative;
-  overflow: hidden;
-  padding: 25px 12px 35px;
-  border: 4px solid #fff5c9;
-  border-radius: 28px;
-  background:
-    radial-gradient(ellipse at 50% 100%, #74b94f 0, #a8df7e 58%, #c8ed9b 100%);
-  box-shadow: 0 9px 0 #6da951, 0 14px 25px #477e3540;
-}
-
-.holes {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(12px, 3.5vw, 26px) 12px;
-  max-width: 590px;
-  margin: 22px auto 0;
-}
-
-.hole {
-  position: relative;
-  min-width: 0;
-  aspect-ratio: 1 / 0.94;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: crosshair;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.hole:focus-visible {
-  outline: 3px solid white;
-  outline-offset: 3px;
-  border-radius: 18px;
-}
-
-.hole-dirt {
-  position: absolute;
-  z-index: 2;
-  left: 4%;
-  right: 4%;
-  bottom: 3%;
-  height: 35%;
-  border: 3px solid #87532e;
-  border-radius: 50%;
-  background:
-    radial-gradient(ellipse at 35% 25%, #b87b45 0 8%, transparent 9%),
-    linear-gradient(#754529, #4c3025);
-  box-shadow: inset 0 5px 0 #c18a4e, 0 5px 0 #6b9b44;
-}
-
-.mole-window {
-  position: absolute;
-  z-index: 1;
-  left: 3%;
-  right: 3%;
-  bottom: 12%;
-  height: 78%;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.mole {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center bottom;
-  transform: translate(-50%, 105%);
-  opacity: 0;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
-.hole.up .mole {
-  transform: translate(-50%, 0);
-  opacity: 1;
-}
-
-.hole.hit .mole {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
-.hole.hit .hole-dirt {
-  filter: brightness(1.13);
-}
-
-.garden-decoration {
-  position: absolute;
-  opacity: 0.85;
-  pointer-events: none;
-}
-
-.flower-one {
-  top: 15px;
-  left: 15px;
-  font-size: 28px;
-}
-
-.flower-two {
-  top: 52px;
-  right: 18px;
-  font-size: 24px;
-}
-
-.butterfly {
-  top: 18px;
-  right: 23%;
-  font-size: 23px;
-}
-
-.message {
-  position: relative;
-  z-index: 3;
-  min-height: 28px;
-  margin: 23px 0 0;
-  text-align: center;
-  font-size: 16px;
-  font-weight: 800;
-  color: #386d37;
-}
-
-.controls {
-  text-align: center;
-  padding-top: 24px;
-}
-
-.start-button {
-  min-width: 190px;
-  padding: 14px 28px;
-  border: 3px solid #fff8d8;
-  border-radius: 999px;
-  color: white;
-  background: linear-gradient(#ffb84c, #f28a31);
-  box-shadow: 0 6px 0 #c66b28;
-  font-size: 18px;
-  font-weight: 900;
-  cursor: pointer;
-  transition: transform 0.12s, box-shadow 0.12s;
-}
-
-.start-button:hover {
-  filter: brightness(1.05);
-}
-
-.start-button:active {
-  transform: translateY(4px);
-  box-shadow: 0 2px 0 #c66b28;
-}
-
-.start-button:disabled {
-  cursor: default;
-  opacity: 0.8;
-}
-
-.instructions {
-  color: #4f7c43;
-  font-size: 13px;
-}
-
-/* 木槌 Sprite Sheet：預期為 6 格、1152 × 192 px */
-.hammer {
-  position: fixed;
-  z-index: 20;
-  left: -300px;
-  top: -300px;
-  width: 192px;
-  height: 192px;
-  background-image: url("assets/sprites/hammer/hammer_basic.png");
-  background-repeat: no-repeat;
-  background-size: 600% 100%;
-  background-position: 0 0;
-  pointer-events: none;
-  opacity: 0;
-  transform-origin: 50% 78%;
-}
-
-.hammer.show {
-  opacity: 1;
-}
-
-.hammer.swing {
-  animation: hammer-swing 0.36s steps(1, end) forwards;
-}
-
-@keyframes hammer-swing {
-  0%   { background-position: 0 0; transform: rotate(-12deg) scale(1); }
-  20%  { background-position: 20% 0; transform: rotate(8deg) scale(1.02); }
-  40%  { background-position: 40% 0; transform: rotate(24deg) scale(0.96); }
-  60%  { background-position: 60% 0; transform: rotate(20deg) scale(0.98); }
-  80%  { background-position: 80% 0; transform: rotate(-4deg) scale(1.02); }
-  100% { background-position: 100% 0; transform: rotate(-12deg) scale(1); }
-}
-
-@media (max-width: 480px) {
-  body {
-    padding: 14px 9px 28px;
-  }
-
-  .stat {
-    border-radius: 13px;
-    padding: 10px 2px;
-  }
-
-  .stat span {
-    font-size: 11px;
-  }
-
-  .garden {
-    padding: 18px 7px 25px;
-    border-radius: 22px;
-  }
-
-  .holes {
-    gap: 12px 5px;
-  }
-
-  .hole-dirt {
-    border-width: 2px;
-  }
-
-  .mole-window {
-    left: 0;
-    right: 0;
-  }
-
-  .hammer {
-    width: 120px;
-    height: 120px;
+function loadBestScore() {
+  try {
+    return Number(localStorage.getItem("gardenWhackBest")) || 0;
+  } catch {
+    return 0;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+function saveBestScore(value) {
+  try {
+    localStorage.setItem("gardenWhackBest", String(value));
+  } catch {
+    // 若瀏覽器限制儲存功能，遊戲仍然可以繼續。
   }
 }
+
+function createHoles() {
+  holesElement.innerHTML = "";
+
+  for (let i = 0; i < HOLE_COUNT; i++) {
+    const hole = document.createElement("button");
+    hole.type = "button";
+    hole.className = "hole";
+    hole.setAttribute("aria-label", `地鼠洞 ${i + 1}`);
+
+    const windowEl = document.createElement("span");
+    windowEl.className = "mole-window";
+
+    const mole = document.createElement("img");
+    mole.className = "mole";
+    mole.alt = "";
+    mole.draggable = false;
+
+    const dirt = document.createElement("span");
+    dirt.className = "hole-dirt";
+
+    windowEl.appendChild(mole);
+    hole.append(windowEl, dirt);
+
+    hole.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+
+      if (!playing) return;
+
+      if (activeMoles.has(i)) {
+        hitMole(i, event.clientX, event.clientY);
+      } else {
+        missMole();
+      }
+    });
+
+    holesElement.appendChild(hole);
+  }
+}
+
+function setMoleFrame(hole, frameIndex) {
+  const img = hole.querySelector(".mole");
+  img.src = MOLE_PATH + MOLE_FRAMES[frameIndex];
+}
+
+function clearMole(i) {
+  const record = activeMoles.get(i);
+  if (!record) return;
+
+  record.timeouts.forEach(clearTimeout);
+
+  const hole = holesElement.children[i];
+  hole.classList.remove("up", "hit");
+  activeMoles.delete(i);
+}
+
+function showMole(i) {
+  if (!playing || activeMoles.has(i)) return;
+
+  const hole = holesElement.children[i];
+  const record = { hit: false, timeouts: [] };
+  activeMoles.set(i, record);
+
+  // 逐格播放正常出現動畫。
+  for (let frame = 0; frame < 5; frame++) {
+    const timeout = setTimeout(() => {
+      if (!playing || record.hit || activeMoles.get(i) !== record) return;
+
+      setMoleFrame(hole, frame);
+
+      if (frame === 4) {
+        hole.classList.add("up");
+      }
+    }, frame * 65);
+
+    record.timeouts.push(timeout);
+  }
+
+  // 若玩家沒有擊中，地鼠會自行縮回。
+  const hideTimeout = setTimeout(() => {
+    if (activeMoles.get(i) !== record || record.hit) return;
+    retreatMole(i, record);
+  }, 1100 + Math.random() * 800);
+
+  record.timeouts.push(hideTimeout);
+}
+
+function retreatMole(i, record) {
+  const hole = holesElement.children[i];
+  record.timeouts.forEach(clearTimeout);
+
+  for (let j = 0; j < 3; j++) {
+    const frameIndex = 9 + j;
+    const timeout = setTimeout(() => {
+      if (activeMoles.get(i) !== record) return;
+
+      setMoleFrame(hole, frameIndex);
+
+      if (j === 2) {
+        hole.classList.remove("up", "hit");
+        activeMoles.delete(i);
+      }
+    }, j * 70);
+
+    record.timeouts.push(timeout);
+  }
+}
+
+function hitMole(i, x, y) {
+  const record = activeMoles.get(i);
+  if (!record || record.hit) return;
+
+  record.hit = true;
+  record.timeouts.forEach(clearTimeout);
+
+  const hole = holesElement.children[i];
+  hole.classList.add("up", "hit");
+
+  score += 10;
+  combo += 1;
+
+  scoreElement.textContent = score;
+  comboElement.textContent = combo;
+
+  messageElement.textContent =
+    combo >= 3 ? `太厲害了！${combo} 連擊！` : "命中！ +10 分";
+
+  // 播放被打中的第 6–9 格，再縮回。
+  const hitFrames = [5, 6, 7, 8];
+
+  hitFrames.forEach((frameIndex, index) => {
+    const timeout = setTimeout(() => {
+      if (activeMoles.get(i) !== record) return;
+      setMoleFrame(hole, frameIndex);
+    }, index * 65);
+
+    record.timeouts.push(timeout);
+  });
+
+  const retreatTimeout = setTimeout(() => {
+    if (activeMoles.get(i) !== record) return;
+    retreatMole(i, record);
+  }, 360);
+
+  record.timeouts.push(retreatTimeout);
+
+  animateHammer(x, y);
+}
+
+function missMole() {
+  combo = 0;
+  comboElement.textContent = combo;
+  messageElement.textContent = "差一點！再試一次！";
+}
+
+function animateHammer(x, y) {
+  hammerElement.style.left = `${x - hammerElement.offsetWidth / 2}px`;
+  hammerElement.style.top = `${y - hammerElement.offsetHeight / 2}px`;
+
+  hammerElement.classList.remove("swing");
+  hammerElement.classList.add("show");
+
+  // 重新觸發 CSS 動畫。
+  void hammerElement.offsetWidth;
+  hammerElement.classList.add("swing");
+
+  setTimeout(() => {
+    hammerElement.classList.remove("swing", "show");
+    hammerElement.style.left = "-300px";
+    hammerElement.style.top = "-300px";
+  }, 400);
+}
+
+function chooseHole() {
+  const available = [];
+
+  for (let i = 0; i < HOLE_COUNT; i++) {
+    if (!activeMoles.has(i)) available.push(i);
+  }
+
+  if (available.length === 0) return -1;
+
+  // 盡可能避免連續出現在同一個洞口。
+  let choices = available.filter((i) => i !== lastHoleIndex);
+  if (choices.length === 0) choices = available;
+
+  const chosen = choices[Math.floor(Math.random() * choices.length)];
+  lastHoleIndex = chosen;
+  return chosen;
+}
+
+function spawnMole() {
+  if (!playing) return;
+
+  const index = chooseHole();
+  if (index !== -1) showMole(index);
+
+  // 遊戲進行時逐漸加快出現頻率。
+  const delay = Math.max(420, 900 - (TOTAL_TIME - timeLeft) * 7);
+  spawnId = setTimeout(spawnMole, delay);
+}
+
+function updateTimer() {
+  timeLeft -= 1;
+  timeElement.textContent = timeLeft;
+
+  if (timeLeft <= 0) endGame();
+}
+
+function startGame() {
+  stopAllTimers();
+
+  score = 0;
+  combo = 0;
+  timeLeft = TOTAL_TIME;
+  lastHoleIndex = -1;
+  playing = true;
+
+  scoreElement.textContent = score;
+  comboElement.textContent = combo;
+  timeElement.textContent = timeLeft;
+  messageElement.textContent = "開始！快點擊地鼠！";
+  startButton.textContent = "遊戲進行中…";
+  startButton.disabled = true;
+
+  for (let i = 0; i < HOLE_COUNT; i++) {
+    const hole = holesElement.children[i];
+    hole.classList.remove("up", "hit");
+    hole.querySelector(".mole").removeAttribute("src");
+  }
+
+  activeMoles.clear();
+
+  spawnMole();
+  timerId = setInterval(updateTimer, 1000);
+}
+
+function stopAllTimers() {
+  clearInterval(timerId);
+  clearTimeout(spawnId);
+  timerId = null;
+  spawnId = null;
+
+  activeMoles.forEach((record) => {
+    record.timeouts.forEach(clearTimeout);
+  });
+
+  activeMoles.clear();
+}
+
+function endGame() {
+  playing = false;
+  stopAllTimers();
+
+  for (let i = 0; i < HOLE_COUNT; i++) {
+    holesElement.children[i].classList.remove("up", "hit");
+  }
+
+  if (score > bestScore) {
+    bestScore = score;
+    bestElement.textContent = bestScore;
+    saveBestScore(bestScore);
+  }
+
+  messageElement.textContent = `時間到！你得到 ${score} 分！`;
+  startButton.textContent = "再玩一次";
+  startButton.disabled = false;
+}
+
+startButton.addEventListener("click", startGame);
+
+createHoles();
+timeElement.textContent = TOTAL_TIME;
+scoreElement.textContent = "0";
+comboElement.textContent = "0";
+bestElement.textContent = bestScore;
